@@ -9,10 +9,10 @@
 </p>
 
 <p align=center>
-	<img src="https://custom-icon-badges.demolab.com/github/languages/code-size/kubinka0505/regmgr?logo=database&style=for-the-badge">　<a href="https://github.com/kubinka0505/regmgr/actions/workflows/coverage_test_unit.yml"><img src="https://img.shields.io/codacy/coverage/4c4b827cf3554c0890572307585020f0?logo=code-climate&style=for-the-badge"></a>
+	<img src="https://custom-icon-badges.demolab.com/github/languages/code-size/kubinka0505/regmgr?logo=database&style=for-the-badge">　<a href="https://github.com/kubinka0505/regmgr/actions/workflows/coverage_test_unit.yml"><img src="https://img.shields.io/codacy/coverage/5d90e0ba6272486d96afc814e081374f?logo=code-climate&style=for-the-badge"></a>
 
 <p align=center>
-	<a href="https://codeclimate.com/github/kubinka0505/regmgr"><img src="https://custom-icon-badges.demolab.com/codeclimate/maintainability/kubinka0505/regmgr?logo=code-climate&style=for-the-badge"></a>　<a href="https://app.codacy.com/gh/kubinka0505/regmgr"><img src="https://custom-icon-badges.demolab.com/codacy/grade/4c4b827cf3554c0890572307585020f0?logo=codacy&style=for-the-badge"></a>
+	<a href="https://codeclimate.com/github/kubinka0505/regmgr"><img src="https://custom-icon-badges.demolab.com/codeclimate/maintainability/kubinka0505/regmgr?logo=code-climate&style=for-the-badge"></a>　<a href="https://app.codacy.com/gh/kubinka0505/regmgr"><img src="https://custom-icon-badges.demolab.com/codacy/grade/5d90e0ba6272486d96afc814e081374f?logo=codacy&style=for-the-badge"></a>
 </p>
 
 ## Description 📝
