@@ -1,8 +1,7 @@
 """Pytest tests for RegEntry class."""
 import os
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch, mock_open
+from unittest.mock import Mock, patch
 
 # Mock the relative imports before importing core
 from unittest.mock import MagicMock

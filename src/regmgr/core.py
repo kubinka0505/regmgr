@@ -208,7 +208,7 @@ class RegEntry(Mapping):
 				self._key_resolver(key_name),
 
 				access = winreg.KEY_READ
-			) as entry:
+			) as _:
 				retval = True
 		except (OSError, AttributeError):
 			retval = False
@@ -565,7 +565,7 @@ class RegEntry(Mapping):
 
 			winreg.SetValueEx(entry, name, 0, var_type_obj, value)
 
-	def get(self, variable_name: str) -> tuple:
+	def get(self, variable_name: str, default = None) -> tuple:
 		"""
 		Retrieves a variable's value and type from the current subkey.
 
@@ -574,15 +574,13 @@ class RegEntry(Mapping):
 			variable_name (str):
 				Name of the variable to retrieve.
 
+			default:
+				Value to return when variable does not exist.
+
 		Returns
 		-------
 			tuple:
 				(value, REG_TYPE).
-
-		Raises
-		------
-			exceptions.variable.NOTEXISTS:
-				If the variable does not exist.
 		"""
 		with winreg.OpenKey(
 			self.hive_constant,
@@ -591,7 +589,7 @@ class RegEntry(Mapping):
 			access = winreg.KEY_READ
 		) as entry:
 			if not self.variable_exists(variable_name):
-				raise exceptions.variable.NOTEXISTS
+				return default
 
 			retval = list(winreg.QueryValueEx(entry, variable_name))
 			retval[1] = self._types[retval[1]]

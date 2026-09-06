@@ -89,12 +89,6 @@ def traverse_registry(
 						except OSError:
 							break
 
-					# Enumerate subkeys
-					try:
-						child_subkeys = list(list_subkeys_fn(sub_entry))
-					except (OSError, StopIteration):
-						child_subkeys = []
-
 					# Determine whether key contains values
 					has_values = bool(values)
 
