@@ -677,6 +677,7 @@ class TestTraverseRegistry:
 	def test_traverse_registry_basic(self):
 		"""Test traverse_registry adds header to output."""
 		output_array = []
+
 		mock_list_fn = Mock(return_value = [])
 		mock_types = {1: "REG_SZ"}
 
@@ -702,6 +703,7 @@ class TestTraverseRegistry:
 	def test_traverse_registry_with_values(self, mock_enum_value, mock_open_key):
 		"""Test traverse_registry processes key values."""
 		output_array = []
+
 		mock_key = Mock()
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
@@ -740,6 +742,7 @@ class TestCoreSubkeysRecursive:
 	def test_subkeys_recursive(self, mock_open_key, mock_enum_key):
 		"""Test subkeys with recursive = True."""
 		mock_key = Mock()
+
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 
@@ -747,8 +750,10 @@ class TestCoreSubkeysRecursive:
 		call_count = [0]
 		def enum_side_effect(key, index):
 			call_count[0] += 1
+
 			if call_count[0] == 1:
 				return "Services"
+
 			raise OSError() # No more keys
 
 		mock_enum_key.side_effect = enum_side_effect
@@ -763,6 +768,7 @@ class TestCoreSubkeysRecursive:
 	def test_subkeys_absolute_paths(self, mock_open_key, mock_enum_key):
 		"""Test subkeys with absolute_paths = True."""
 		mock_key = Mock()
+
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 		mock_enum_key.side_effect = OSError()
@@ -908,6 +914,7 @@ class TestCoreVariableOperations:
 	def test_set_variable_exist_ok_false(self, mock_set, mock_open):
 		"""Test set with exist_ok = False raises if exists."""
 		mock_key = Mock()
+
 		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open.return_value.__exit__ = Mock(return_value = None)
 
@@ -921,6 +928,7 @@ class TestCoreVariableOperations:
 	def test_get_all_variables(self, mock_query, mock_open):
 		"""Test get without variable name returns all."""
 		mock_key = Mock()
+
 		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open.return_value.__exit__ = Mock(return_value = None)
 
@@ -934,6 +942,7 @@ class TestCoreVariableOperations:
 	def test_delete_variable_alias(self, mock_delete, mock_open):
 		"""Test delete_variable alias."""
 		mock_key = Mock()
+		
 		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open.return_value.__exit__ = Mock(return_value = None)
 

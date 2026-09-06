@@ -3,7 +3,6 @@
 <a href="https://github.com/kubinka0505/regmgr/commit"><img src="https://custom-icon-badges.demolab.com/github/last-commit/kubinka0505/regmgr?logo=commit&style=for-the-badge&cacheSeconds=60" alt="Last commit date"></a>　<a href="https://github.com/kubinka0505/regmgr/blob/main/License.txt"><img src="https://custom-icon-badges.demolab.com/github/license/kubinka0505/regmgr?logo=law&color=red&style=for-the-badge&cacheSeconds=60" alt="View license"></a>
 <br>
 <a href="https://app.codacy.com/gh/kubinka0505/regmgr"><img src="https://img.shields.io/codacy/grade/5d90e0ba6272486d96afc814e081374f?logo=codacy&style=for-the-badge&cacheSeconds=60" alt="View grade"></a>　<a href="https://app.codacy.com/gh/kubinka0505/regmgr/coverage"><img src="https://img.shields.io/codacy/coverage/5d90e0ba6272486d96afc814e081374f?logo=codacy&style=for-the-badge&cacheSeconds=60"></a>
-<br><a href="https://colab.research.google.com/github/kubinka0505/regmgr/blob/main/docs/Notebook.ipynb"><img src="https://shields.io/badge/Colab-Open-F9AB00?&logoColor=F9AB00&style=for-the-badge&logo=Google-Colab&cacheSeconds=60" alt="Open in Google Colab"></a>
 
 ## Description 📝
 Simplified wrapper for the Python [`winreg`](https://docs.python.org/library/winreg.html) module. 🗃️
