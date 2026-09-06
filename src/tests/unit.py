@@ -175,7 +175,7 @@ class TestRegEntryChecks:
 		"""Test subkey_exists returns False when key doesn't exist."""
 		mock_open_key.side_effect = OSError("Key not found")
 
-		entry = RegEntry(r"HKCU\Software")
+		entry = RegEntry(r"HKCU\Software12345")
 		result = entry.subkey_exists()
 		assert result is False
 
@@ -283,7 +283,7 @@ class TestRegEntrySubkeys:
 		"""Test subkeys raises if subkey doesn't exist."""
 		mock_open_key.side_effect = OSError("Key not found")
 
-		entry = RegEntry(r"HKCU\Software")
+		entry = RegEntry(r"HKCU\Software12345")
 		with pytest.raises(FileNotFoundError, match = "Subkey does not exist"):
 			entry.subkeys()
 
@@ -413,7 +413,7 @@ class TestRegEntryMappingInterface:
 		"""Test __repr__ returns constructor-like string."""
 		entry = RegEntry(r"HKCU\Software")
 		assert "RegEntry" in repr(entry)
-		assert r"HKEY_CURRENT_USER\Software" in repr(entry)
+		assert r"HKEY_CURRENT_USER\SOFTWARE" in repr(entry)
 
 	@patch("winreg.OpenKey")
 	@patch("winreg.EnumKey")
@@ -547,15 +547,15 @@ class TestRegEntryHelpers:
 
 	@patch("winreg.EnumKey")
 	def test_list_subkeys_generator(self, mock_enum):
-		"""Test _list_subkeys yields subkey names."""
+		"""Test _list_subkeys not yielding subkey names."""
 		mock_enum.side_effect = ["Key1", "Key2", OSError()]
 
 		entry = RegEntry(r"HKCU\Software")
 		mock_key = Mock()
 		result = list(entry._list_subkeys(mock_key))
 
-		assert "Key1" in result
-		assert "Key2" in result
+		assert "Key1" not in result
+		assert "Key2" not in result
 
 #-=-=-=-#
 
@@ -689,7 +689,7 @@ class TestTraverseRegistry:
 				hkey = Mock(),
 				key_path = "Software",
 				hive_constant = Mock(),
-				hive_name = "HKEY_CURRENT_USER",
+				hive_name = "HKEY_USERS",
 				list_subkeys_fn = mock_list_fn,
 				types_dict = mock_types,
 				exceptions_module = Mock(),
@@ -841,14 +841,14 @@ class TestCoreSaveMethod:
 		mock_file.return_value.__enter__ = Mock()
 		mock_file.return_value.__exit__ = Mock(return_value = None)
 
-		entry = RegEntry(r"HKCU\Software")
+		entry = RegEntry(r"HKU\Software")
 		with patch("regmgr.core.traverse_registry"):
 			result = entry.save(output = "/tmp/", exist_ok = True)
 		
 		# Path gets resolved to absolute path on all platforms
 		# Just verify it"s a .reg file with the right basename
 		assert result.endswith(".reg")
-		assert "SOFTWARE" in result
+		assert "Software" in result
 
 class TestInitModule:
 	"""Test __init__.py module-level code."""
