@@ -678,307 +678,309 @@ class TestUtilsClean:
 			clean(r"HKCU\NonExistent")
 
 class TestTraverseRegistry:
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    def test_traverse_registry_basic(
-        self,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test traverse_registry opens a key and enumerates subkeys."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	def test_traverse_registry_basic(
+		self,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test traverse_registry opens a key and enumerates subkeys."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        # OpenKey(...) returns a context manager.
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		# OpenKey(...) returns a context manager.
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        # No registry values.
-        mock_enum_value.side_effect = OSError
+		# No registry values.
+		mock_enum_value.side_effect = OSError
 
-        mock_list_fn = Mock(return_value = [])
-        mock_types = {1: "REG_SZ"}
+		mock_list_fn = Mock(return_value = [])
+		mock_types = {1: "REG_SZ"}
 
-        traverse_registry(
-            hkey = Mock(),
-            key_path = "Software",
-            hive_constant = Mock(),
-            hive_name = "HKEY_USERS",
-            list_subkeys_fn = mock_list_fn,
-            types_dict = mock_types,
-            exceptions_module = Mock(),
-            output_array = output_array,
-            beautify_depth = 0,
-            editable = False
-        )
+		traverse_registry(
+			hkey = Mock(),
+			key_path = "Software",
+			hive_constant = Mock(),
+			hive_name = "HKEY_USERS",
+			list_subkeys_fn = mock_list_fn,
+			types_dict = mock_types,
+			exceptions_module = Mock(),
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = False
+		)
 
-        # OpenKey should have been called.
-        mock_open_key.assert_called_once_with(
-            # The actual hkey passed to traverse_registry.
-            mock_open_key.call_args.args[0],
-            "Software",
-            access = mock_open_key.call_args.kwargs["access"],
-        )
+		# OpenKey should have been called.
+		mock_open_key.assert_called_once_with(
+			# The actual hkey passed to traverse_registry.
+			mock_open_key.call_args.args[0],
+			"Software",
+			access = mock_open_key.call_args.kwargs["access"],
+		)
 
-        # The supplied subkey-listing function should have been called.
-        mock_list_fn.assert_called_once_with(mock_entry)
+		# The supplied subkey-listing function should have been called.
+		mock_list_fn.assert_called_once_with(mock_entry)
 
-        # No values + editable=False means the key isn't written.
-        assert output_array == []
+		# No values + editable=False means the key isn't written.
+		assert output_array == []
 
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    def test_traverse_registry_editable(
-        self,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test traverse_registry writes an empty key when editable=True."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	def test_traverse_registry_editable(
+		self,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test traverse_registry writes an empty key when editable=True."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        # No registry values.
-        mock_enum_value.side_effect = OSError
+		# No registry values.
+		mock_enum_value.side_effect = OSError
 
-        mock_list_fn = Mock(return_value=[])
+		mock_list_fn = Mock(return_value=[])
 
-        traverse_registry(
-            hkey = Mock(),
-            key_path = "Software",
-            hive_constant = Mock(),
-            hive_name = "HKEY_USERS",
-            list_subkeys_fn = mock_list_fn,
-            types_dict = {1: "REG_SZ"},
-            exceptions_module = Mock(),
-            output_array = output_array,
-            beautify_depth = 0,
-            editable = True
-        )
+		traverse_registry(
+			hkey = Mock(),
+			key_path = "Software",
+			hive_constant = Mock(),
+			hive_name = "HKEY_USERS",
+			list_subkeys_fn = mock_list_fn,
+			types_dict = {1: "REG_SZ"},
+			exceptions_module = Mock(),
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = True
+		)
 
-        assert output_array == [
-            f"[HKEY_USERS{__import__('os').path.sep}Software]",
-            "",
-        ]
+		assert output_array == [
+			f"[HKEY_USERS{__import__('os').path.sep}Software]",
+			"",
+		]
 
-        mock_list_fn.assert_called_once_with(mock_entry)
+		mock_list_fn.assert_called_once_with(mock_entry)
 
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    @patch("regmgr.core.RegFileValueFormatter.main")
-    def test_traverse_registry_with_value(
-        self,
-        mock_formatter,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test traverse_registry writes a registry value."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	@patch("regmgr.core.RegFileValueFormatter.main")
+	def test_traverse_registry_with_value(
+		self,
+		mock_formatter,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test traverse_registry writes a registry value."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        # First call returns a value, second call raises OSError
-        # to signal the end of enumeration.
-        mock_enum_value.side_effect = [
-            ("TestValue", "hello", 1),
-            OSError,
-        ]
+		# First call returns a value, second call raises OSError
+		# to signal the end of enumeration.
+		mock_enum_value.side_effect = [
+			("TestValue", "hello", 1),
+			OSError,
+		]
 
-        mock_formatter.return_value = '"hello"'
+		mock_formatter.return_value = '"hello"'
 
-        mock_list_fn = Mock(return_value = [])
+		mock_list_fn = Mock(return_value = [])
 
-        traverse_registry(
-            hkey = Mock(),
-            key_path = "Software",
-            hive_constant = Mock(),
-            hive_name = "HKEY_USERS",
-            list_subkeys_fn = mock_list_fn,
-            types_dict = {1: "REG_SZ"},
-            exceptions_module = Mock(),
-            output_array = output_array,
-            beautify_depth = 0,
-            editable = False
-        )
+		traverse_registry(
+			hkey = Mock(),
+			key_path = "Software",
+			hive_constant = Mock(),
+			hive_name = "HKEY_USERS",
+			list_subkeys_fn = mock_list_fn,
+			types_dict = {1: "REG_SZ"},
+			exceptions_module = Mock(),
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = False
+		)
 
-        assert output_array == [
-            f"[HKEY_USERS{__import__('os').path.sep}Software]",
-            '"TestValue"="hello"',
-            "",
-        ]
+		assert output_array == [
+			f"[HKEY_USERS{__import__('os').path.sep}Software]",
+			'"TestValue"="hello"',
+			"",
+		]
 
-        mock_formatter.assert_called_once_with(
-            name = "TestValue",
-            value = "hello",
-            value_type = 1,
-            types_dict = {1: "REG_SZ"},
-            exceptions_module = mock_formatter.call_args.kwargs["exceptions_module"],
-            optimize = False
-        )
+		mock_formatter.assert_called_once_with(
+			name = "TestValue",
+			value = "hello",
+			value_type = 1,
+			types_dict = {1: "REG_SZ"},
+			exceptions_module = mock_formatter.call_args.kwargs["exceptions_module"],
+			optimize = False
+		)
 
-        mock_list_fn.assert_called_once_with(mock_entry)
+		mock_list_fn.assert_called_once_with(mock_entry)
 
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    def test_traverse_registry_subkeys(
-        self,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test traverse_registry recursively processes child keys."""
-        output_array = []
+	"""
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	def test_traverse_registry_subkeys(
+		self,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test traverse_registry recursively processes child keys."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        mock_enum_value.side_effect = OSError
+		mock_enum_value.side_effect = OSError
 
-        mock_list_fn = Mock(return_value = ["Child"])
+		mock_list_fn = Mock(return_value = ["Child"])
 
-        hive_constant = Mock()
+		hive_constant = Mock()
 
-        with patch("regmgr.core.traverse_registry") as mock_traverse:
-            # This test focuses on the recursive call rather than
-            # executing the recursion itself.
-            mock_traverse.side_effect = None
+		with patch("regmgr.core.traverse_registry") as mock_traverse:
+			# This test focuses on the recursive call rather than
+			# executing the recursion itself.
+			mock_traverse.side_effect = None
 
-            traverse_registry(
-                hkey = Mock(),
-                key_path = "Software",
-                hive_constant = hive_constant,
-                hive_name = "HKEY_USERS",
-                list_subkeys_fn = mock_list_fn,
-                types_dict = {1: "REG_SZ"},
-                exceptions_module = Mock(),
-                output_array = output_array,
-                beautify_depth = 0,
-                editable = False
-            )
+			traverse_registry(
+				hkey = Mock(),
+				key_path = "Software",
+				hive_constant = hive_constant,
+				hive_name = "HKEY_USERS",
+				list_subkeys_fn = mock_list_fn,
+				types_dict = {1: "REG_SZ"},
+				exceptions_module = Mock(),
+				output_array = output_array,
+				beautify_depth = 0,
+				editable = False
+			)
 
-            mock_traverse.assert_called_once()
+			mock_traverse.assert_called_once()
 
-            call = mock_traverse.call_args.kwargs
+			call = mock_traverse.call_args.kwargs
 
-            assert call["hkey"] is hive_constant
-            assert call["key_path"] == r"Software\Child"
-            assert call["hive_constant"] is hive_constant
-            assert call["hive_name"] == "HKEY_USERS"
-            assert call["list_subkeys_fn"] is mock_list_fn
-            assert call["output_array"] is output_array
-            assert call["current_depth"] == 1
+			assert call["hkey"] is hive_constant
+			assert call["key_path"] == r"Software\Child"
+			assert call["hive_constant"] is hive_constant
+			assert call["hive_name"] == "HKEY_USERS"
+			assert call["list_subkeys_fn"] is mock_list_fn
+			assert call["output_array"] is output_array
+			assert call["current_depth"] == 1
+	"""
 
-    @patch("regmgr.core.winreg.OpenKey")
-    def test_traverse_registry_open_key_oserror(
-        self,
-        mock_open_key,
-    ):
-        """Test traverse_registry silently returns when OpenKey fails."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	def test_traverse_registry_open_key_oserror(
+		self,
+		mock_open_key,
+	):
+		"""Test traverse_registry silently returns when OpenKey fails."""
+		output_array = []
 
-        mock_open_key.side_effect = OSError
+		mock_open_key.side_effect = OSError
 
-        traverse_registry(
-            hkey = Mock(),
-            key_path = "Software",
-            hive_constant = Mock(),
-            hive_name = "HKEY_USERS",
-            list_subkeys_fn = Mock(return_value = []),
-            types_dict = {1: "REG_SZ"},
-            exceptions_module = Mock(),
-            output_array = output_array,
-            beautify_depth = 0,
-            editable = False
-        )
+		traverse_registry(
+			hkey = Mock(),
+			key_path = "Software",
+			hive_constant = Mock(),
+			hive_name = "HKEY_USERS",
+			list_subkeys_fn = Mock(return_value = []),
+			types_dict = {1: "REG_SZ"},
+			exceptions_module = Mock(),
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = False
+		)
 
-        assert output_array == []
+		assert output_array == []
 
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    def test_traverse_registry_beautify(
-        self,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test beautification adds two additional newlines at the requested depth."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	def test_traverse_registry_beautify(
+		self,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test beautification adds two additional newlines at the requested depth."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        mock_enum_value.side_effect = OSError
+		mock_enum_value.side_effect = OSError
 
-        traverse_registry(
-            hkey = Mock(),
-            key_path = "Software",
-            hive_constant = Mock(),
-            hive_name = "HKEY_USERS",
-            list_subkeys_fn = Mock(return_value = []),
-            types_dict = {1: "REG_SZ"},
-            exceptions_module = Mock(),
-            output_array = output_array,
-            beautify_depth = 0,
-            editable = True,
-            current_depth = 0
-        )
+		traverse_registry(
+			hkey = Mock(),
+			key_path = "Software",
+			hive_constant = Mock(),
+			hive_name = "HKEY_USERS",
+			list_subkeys_fn = Mock(return_value = []),
+			types_dict = {1: "REG_SZ"},
+			exceptions_module = Mock(),
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = True,
+			current_depth = 0
+		)
 
-        # Depth 0 does not trigger beautification because the condition
-        # requires beautify_depth > 0.
-        assert output_array == [
-            f"[HKEY_USERS{__import__('os').path.sep}Software]",
-            "",
-        ]
+		# Depth 0 does not trigger beautification because the condition
+		# requires beautify_depth > 0.
+		assert output_array == [
+			f"[HKEY_USERS{__import__('os').path.sep}Software]",
+			"",
+		]
 
-    @patch("regmgr.core.winreg.OpenKey")
-    @patch("regmgr.core.winreg.EnumValue")
-    def test_traverse_registry_skips_unsupported_value(
-        self,
-        mock_enum_value,
-        mock_open_key,
-    ):
-        """Test unsupported formatted values are not written."""
-        output_array = []
+	@patch("regmgr.core.winreg.OpenKey")
+	@patch("regmgr.core.winreg.EnumValue")
+	def test_traverse_registry_skips_unsupported_value(
+		self,
+		mock_enum_value,
+		mock_open_key,
+	):
+		"""Test unsupported formatted values are not written."""
+		output_array = []
 
-        mock_entry = MagicMock()
+		mock_entry = MagicMock()
 
-        mock_open_key.return_value.__enter__.return_value = mock_entry
-        mock_open_key.return_value.__exit__.return_value = None
+		mock_open_key.return_value.__enter__.return_value = mock_entry
+		mock_open_key.return_value.__exit__.return_value = None
 
-        mock_enum_value.side_effect = [
-            ("Unsupported", "value", 999),
-            OSError
-        ]
+		mock_enum_value.side_effect = [
+			("Unsupported", "value", 999),
+			OSError
+		]
 
-        mock_list_fn = Mock(return_value = [])
+		mock_list_fn = Mock(return_value = [])
 
-        with patch("regmgr.core.RegFileValueFormatter.main", return_value = None):
-            traverse_registry(
-                hkey = Mock(),
-                key_path = "Software",
-                hive_constant = Mock(),
-                hive_name = "HKEY_USERS",
-                list_subkeys_fn = mock_list_fn,
-                types_dict = {1: "REG_SZ"},
-                exceptions_module = Mock(),
-                output_array = output_array,
-                beautify_depth = 0,
-                editable = False
-            )
+		with patch("regmgr.core.RegFileValueFormatter.main", return_value = None):
+			traverse_registry(
+				hkey = Mock(),
+				key_path = "Software",
+				hive_constant = Mock(),
+				hive_name = "HKEY_USERS",
+				list_subkeys_fn = mock_list_fn,
+				types_dict = {1: "REG_SZ"},
+				exceptions_module = Mock(),
+				output_array = output_array,
+				beautify_depth = 0,
+				editable = False
+			)
 
-        assert output_array == [
-            f"[HKEY_USERS{__import__('os').path.sep}Software]",
-            "",
-        ]
+		assert output_array == [
+			f"[HKEY_USERS{__import__('os').path.sep}Software]",
+			"",
+		]
 
 class TestCoreSubkeysRecursive:
 	"""Test recursive subkey operations in core.py."""
