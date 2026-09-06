@@ -217,7 +217,7 @@ HKEY_USERS\.DEFAULT\Control Panel\International\User Profile System Backup
 </details>
 
 <details>
-	<summary><b>Save to `.reg` file</b> 💾</summary>
+	<summary><b>Save to <code>.reg</code> file</b> 💾</summary>
 
 ```python
 >>> import regmgr
