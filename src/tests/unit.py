@@ -19,6 +19,8 @@ mock_config.exceptions.path.file.EXISTS = Exception("FILE_EXISTS")
 os.sys.modules["core.utils"] = mock_utils
 os.sys.modules["core.config"] = mock_config
 
+#-=-=-=-#
+
 class TestRegEntryInitialization:
 	"""Test RegEntry initialization and path parsing."""
 
