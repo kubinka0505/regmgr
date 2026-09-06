@@ -742,15 +742,15 @@ class TestCoreSubkeysRecursive:
 		mock_key = Mock()
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
-		
+
 		# Use function for side_effect to properly handle multiple calls
 		call_count = [0]
 		def enum_side_effect(key, index):
-			call_count[0] + = 1
+			call_count[0] += 1
 			if call_count[0] == 1:
 				return "Services"
 			raise OSError() # No more keys
-		
+
 		mock_enum_key.side_effect = enum_side_effect
 
 		entry = RegEntry(r"HKCU\Software")
@@ -785,7 +785,7 @@ class TestCoreSaveMethod:
 		entry = RegEntry(r"HKCU\Software")
 		with patch("regmgr.core.traverse_registry"):
 			result = entry.save(output = "/tmp/test", exist_ok = True)
-			
+
 		assert result.endswith(".reg")
 		mock_file.assert_called()
 
@@ -793,11 +793,11 @@ class TestCoreSaveMethod:
 	def test_save_default_output_name(self, mock_exists):
 		"""Test save uses basename as default output."""
 		entry = RegEntry(r"HKCU\Software")
-		
+
 		with patch("builtins.open"):
 			with patch("regmgr.core.traverse_registry"):
 				result = entry.save(exist_ok = True)
-		
+
 		assert "Software" in result
 
 	@patch("builtins.open", create = True)
@@ -810,7 +810,7 @@ class TestCoreSaveMethod:
 		entry = RegEntry(r"HKCU\Software")
 		with patch("regmgr.core.traverse_registry"):
 			entry.save(output = "/tmp/test", beautify_depth = -1, exist_ok = True)
-			
+
 		mock_file.assert_called()
 
 	@patch("os.path.exists", return_value = True)
