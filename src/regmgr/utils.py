@@ -237,7 +237,12 @@ def canonicalize(hive: str, parts: str) -> list:
 			opened = True
 	finally:
 		if opened:
-			winreg.CloseKey(current)
+			try:
+				winreg.CloseKey(current)
+			except TypeError:
+				# handle mocked objects in tests that aren't real PyHKEY objects
+				pass
+
 
 	return result
 

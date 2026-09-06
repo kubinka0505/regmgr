@@ -26,13 +26,13 @@ class TestRegEntryInitialization:
 		"""Test initialization with full hive name."""
 		entry = RegEntry(r"HKEY_CURRENT_USER\Software")
 		assert entry.hive == "HKEY_CURRENT_USER"
-		assert entry.subkey == "Software"
+		assert entry.subkey == "SOFTWARE"
 
 	def test_init_short_hive_name(self):
 		"""Test initialization with short hive alias."""
 		entry = RegEntry(r"HKCU\Software")
 		assert entry.hive == "HKEY_CURRENT_USER"
-		assert entry.subkey == "Software"
+		assert entry.subkey == "SOFTWARE"
 
 	def test_init_hive_only(self):
 		"""Test initialization with hive only."""
@@ -48,7 +48,7 @@ class TestRegEntryInitialization:
 	def test_init_strips_leading_trailing_separators(self):
 		"""Test that leading/trailing separators are stripped."""
 		entry = RegEntry("\\HKCU\\Software\\")
-		assert entry.path == r"HKEY_CURRENT_USER\Software"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE"
 
 	def test_init_case_insensitive_hive(self):
 		"""Test that hive names are case-insensitive."""
@@ -64,7 +64,7 @@ class TestRegEntryInitialization:
 		"""Test that valid paths are accepted."""
 		entry = RegEntry(r"HKCU\Software\Microsoft")
 		assert entry.hive == "HKEY_CURRENT_USER"
-		assert "Software" in entry.subkey
+		assert "SOFTWARE" in entry.subkey
 
 	def test_init_all_hives(self):
 		"""Test initialization with all known hives."""
@@ -75,8 +75,10 @@ class TestRegEntryInitialization:
 			("HKU", "HKEY_USERS"),
 			("HKCC", "HKEY_CURRENT_CONFIG"),
 		]
+
 		for short, full in hives:
 			entry = RegEntry(short)
+
 			assert entry.hive == full
 			assert entry.hive_short == short
 
@@ -86,7 +88,7 @@ class TestRegEntryProperties:
 	def test_path_property(self):
 		"""Test path property returns full path with hive."""
 		entry = RegEntry(r"HKCU\Software\Microsoft")
-		assert entry.path == r"HKEY_CURRENT_USER\Software\Microsoft"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE\Microsoft"
 
 	def test_path_no_trailing_separator(self):
 		"""Test path property removes trailing separator."""
@@ -96,7 +98,7 @@ class TestRegEntryProperties:
 	def test_path_short_property(self):
 		"""Test path_short property returns path with short hive."""
 		entry = RegEntry(r"HKCU\Software\Microsoft")
-		assert entry.path_short == r"HKCU\Software\Microsoft"
+		assert entry.path_short == r"HKCU\SOFTWARE\Microsoft"
 
 	def test_hive_property(self):
 		"""Test hive property returns full hive name."""
@@ -117,7 +119,7 @@ class TestRegEntryProperties:
 	def test_subkey_property(self):
 		"""Test subkey property returns path without hive."""
 		entry = RegEntry(r"HKCU\Software\Microsoft\Windows")
-		assert entry.subkey == r"Software\Microsoft\Windows"
+		assert entry.subkey == r"SOFTWARE\Microsoft\Windows"
 
 	def test_subkey_empty_for_hive_root(self):
 		"""Test subkey is empty for hive root."""
@@ -127,12 +129,12 @@ class TestRegEntryProperties:
 	def test_dirname_property(self):
 		"""Test dirname property returns parent directory."""
 		entry = RegEntry(r"HKCU\Software\Microsoft")
-		assert entry.dirname == r"HKEY_CURRENT_USER\Software"
+		assert entry.dirname == r"HKEY_CURRENT_USER\SOFTWARE"
 
 	def test_dirname_short_property(self):
 		"""Test dirname_short property returns parent with short hive."""
 		entry = RegEntry(r"HKCU\Software\Microsoft")
-		assert entry.dirname_short == r"HKCU\Software"
+		assert entry.dirname_short == r"HKCU\SOFTWARE"
 
 	def test_basename_property(self):
 		"""Test basename property returns last path component."""
@@ -201,6 +203,7 @@ class TestRegEntryChecks:
 
 		entry = RegEntry(r"HKCU\Software")
 		result = entry.variable_exists("MyVar")
+
 		assert result is True
 
 	@patch("winreg.OpenKey")
@@ -232,7 +235,7 @@ class TestRegEntryNavigation:
 		"""Test relcd with forward path."""
 		entry = RegEntry(r"HKCU\Software")
 		entry.relcd(r"Microsoft\Windows")
-		assert entry.path == r"HKEY_CURRENT_USER\Software\Microsoft\Windows"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows"
 
 	def test_relcd_empty_is_noop(self):
 		"""Test relcd with empty string is no-op."""
@@ -245,13 +248,13 @@ class TestRegEntryNavigation:
 		"""Test relcd with parent directory (..)."""
 		entry = RegEntry(r"HKCU\Software\Microsoft\Windows")
 		entry.relcd("..")
-		assert entry.path == r"HKEY_CURRENT_USER\Software\Microsoft"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE\Microsoft"
 
 	def test_relcd_multiple_parents(self):
 		"""Test relcd with multiple parent directories."""
 		entry = RegEntry(r"HKCU\Software\Microsoft\Windows")
 		entry.relcd(r"..\..\Apple")
-		assert entry.path == r"HKEY_CURRENT_USER\Software\Apple"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE\Apple"
 
 	def test_relcd_outside_hive_raises(self):
 		"""Test relcd raises when navigating outside hive."""
@@ -270,7 +273,7 @@ class TestRegEntryNavigation:
 		"""Test relcd strips leading separator."""
 		entry = RegEntry(r"HKCU\Software")
 		entry.relcd("Microsoft") # Leading sep gets stripped anyway
-		assert entry.path == r"HKEY_CURRENT_USER\Software\Microsoft"
+		assert entry.path == r"HKEY_CURRENT_USER\SOFTWARE\Microsoft"
 
 class TestRegEntrySubkeys:
 	"""Test RegEntry subkey methods."""
@@ -404,7 +407,7 @@ class TestRegEntryMappingInterface:
 	def test_str_representation(self):
 		"""Test __str__ returns path."""
 		entry = RegEntry(r"HKCU\Software")
-		assert str(entry) == r"HKEY_CURRENT_USER\Software"
+		assert str(entry) == r"HKEY_CURRENT_USER\SOFTWARE"
 
 	def test_repr_representation(self):
 		"""Test __repr__ returns constructor-like string."""
@@ -528,13 +531,13 @@ class TestRegEntryHelpers:
 		"""Test _key_resolver with relative key name."""
 		entry = RegEntry(r"HKCU\Software")
 		result = entry._key_resolver("Microsoft")
-		assert result == r"Software\Microsoft"
+		assert result == r"SOFTWARE\Microsoft"
 
 	def test_key_resolver_without_key_name(self):
 		"""Test _key_resolver without key name returns current subkey."""
 		entry = RegEntry(r"HKCU\Software")
 		result = entry._key_resolver(None)
-		assert result == "Software"
+		assert result == "SOFTWARE"
 
 	def test_key_resolver_with_valid_name(self):
 		"""Test _key_resolver with valid name."""
@@ -568,12 +571,12 @@ class TestPathModule:
 	def test_path_abspath_full(self):
 		"""Test path.abspath returns full path."""
 		result = reg_path.abspath(r"HKCU\Software")
-		assert result == r"HKEY_CURRENT_USER\Software"
+		assert result == r"HKEY_CURRENT_USER\SOFTWARE"
 
 	def test_path_abspath_short(self):
 		"""Test path.abspath with short = True returns short path."""
 		result = reg_path.abspath(r"HKCU\Software", short = True)
-		assert result == r"HKCU\Software"
+		assert result == r"HKCU\SOFTWARE"
 
 	def test_path_basename(self):
 		"""Test path.basename returns last component."""
@@ -583,12 +586,12 @@ class TestPathModule:
 	def test_path_dirname_full(self):
 		"""Test path.dirname returns parent directory."""
 		result = reg_path.dirname(r"HKCU\Software\Microsoft")
-		assert result == r"HKEY_CURRENT_USER\Software"
+		assert result == r"HKEY_CURRENT_USER\SOFTWARE"
 
 	def test_path_dirname_short(self):
 		"""Test path.dirname with short=True returns short parent."""
 		result = reg_path.dirname(r"HKCU\Software\Microsoft", short = True)
-		assert result == r"HKCU\Software"
+		assert result == r"HKCU\SOFTWARE"
 
 	@patch.object(RegEntry, "subkey_exists", return_value = True)
 	def test_path_exists_true(self, mock_exists):

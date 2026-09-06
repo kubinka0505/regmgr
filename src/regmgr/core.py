@@ -682,7 +682,7 @@ class RegEntry(Mapping):
 			try:
 				subkey = winreg.EnumKey(key, counter)
 				yield subkey
-			except OSError:
+			except (OSError, StopIteration):
 				break
 
 			counter += 1
