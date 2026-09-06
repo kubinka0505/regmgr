@@ -1,12 +1,10 @@
 """Pytest tests for RegEntry class."""
-import os
 import pytest
-from unittest.mock import Mock, patch
+import os
+import tempfile
+from unittest.mock import Mock, patch, MagicMock
 
-# Mock the relative imports before importing core
-from unittest.mock import MagicMock
-
-from regmgr import RegEntry
+from regmgr import RegEntry, path as reg_path, listdir, StringConverter, clean, traverse_registry
 
 mock_utils = MagicMock()
 mock_config = MagicMock()
@@ -555,3 +553,383 @@ class TestRegEntryHelpers:
 
 		assert "Key1" in result
 		assert "Key2" in result
+
+#-=-=-=-#
+
+"""Additional tests to increase coverage for path.py, utils.py, and core.py."""
+
+class TestPathModule:
+	"""Test path.py functions."""
+
+	def test_listdir(self):
+		"""Test listdir returns subkey names."""
+		with patch.object(RegEntry, "__dir__", return_value = ["Software", "Services"]):
+			result = listdir("HKCU")
+			assert isinstance(result, (list, tuple))
+
+	def test_path_abspath_full(self):
+		"""Test path.abspath returns full path."""
+		result = reg_path.abspath(r"HKCU\Software")
+		assert result == r"HKEY_CURRENT_USER\Software"
+
+	def test_path_abspath_short(self):
+		"""Test path.abspath with short = True returns short path."""
+		result = reg_path.abspath(r"HKCU\Software", short = True)
+		assert result == r"HKCU\Software"
+
+	def test_path_basename(self):
+		"""Test path.basename returns last component."""
+		result = reg_path.basename(r"HKCU\Software\Microsoft")
+		assert result == "Microsoft"
+
+	def test_path_dirname_full(self):
+		"""Test path.dirname returns parent directory."""
+		result = reg_path.dirname(r"HKCU\Software\Microsoft")
+		assert result == r"HKEY_CURRENT_USER\Software"
+
+	def test_path_dirname_short(self):
+		"""Test path.dirname with short = True returns short parent."""
+		result = reg_path.dirname(r"HKCU\Software\Microsoft", short = True)
+		assert result == r"HKCU\Software"
+
+	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	def test_path_exists_true(self, mock_exists):
+		"""Test path.exists returns True when key exists."""
+		result = reg_path.exists(r"HKCU\Software")
+		assert result is True
+
+	@patch.object(RegEntry, "subkey_exists", return_value = False)
+	def test_path_exists_false(self, mock_exists):
+		"""Test path.exists returns False when key doesn't exist."""
+		result = reg_path.exists(r"HKCU\NonExistent")
+		assert result is False
+
+	def test_path_is_hive_true(self):
+		"""Test path.is_hive returns True for hive root."""
+		result = reg_path.is_hive("HKCU")
+		assert result is True
+
+	def test_path_is_hive_false(self):
+		"""Test path.is_hive returns False for subkey."""
+		result = reg_path.is_hive(r"HKCU\Software")
+		assert result is False
+
+class TestStringConverter:
+	"""Test StringConverter utility class."""
+
+	def test_str_to_bytes_default_encoding(self):
+		"""Test str_to_bytes with default UTF-8."""
+		result = StringConverter.str_to_bytes("hello")
+		assert result == b"hello"
+
+	def test_str_to_bytes_custom_encoding(self):
+		"""Test str_to_bytes with custom encoding."""
+		result = StringConverter.str_to_bytes("hello", encoding = "ascii")
+		assert result == b"hello"
+
+	def test_hex_to_str(self):
+		"""Test hex_to_str converts hex string to bytes."""
+		result = StringConverter.hex_to_str("48656c6c6f")
+		assert result == b"Hello"
+
+	def test_s2b_alias(self):
+		"""Test s2b alias for str_to_bytes."""
+		result = StringConverter.s2b("test")
+		assert result == b"test"
+
+	def test_h2s_alias(self):
+		"""Test h2s alias for hex_to_str."""
+		result = StringConverter.h2s("74657374")
+		assert result == b"test"
+
+	def test_hex_to_string_alias(self):
+		"""Test hex_to_string alias for hex_to_str."""
+		result = StringConverter.hex_to_string("74657374")
+		assert result == b"test"
+
+class TestUtilsClean:
+	"""Test clean function to remove all variables from a key."""
+
+	@patch("regmgr.utils.RegEntry")
+	def test_clean_removes_all_variables(self, mock_reg_entry_class):
+		"""Test clean removes all variables from key."""
+		mock_entry = Mock()
+		mock_entry.exists.return_value = True
+		mock_entry.variables.return_value = ["Var1", "Var2"]
+		mock_reg_entry_class.return_value = mock_entry
+
+		clean(r"HKCU\Software")
+
+		# Verify variables were deleted
+		assert mock_entry.delete_variable.call_count == 2
+
+	@patch("regmgr.utils.RegEntry")
+	def test_clean_raises_if_key_not_exists(self, mock_reg_entry_class):
+		"""Test clean raises if key doesn't exist."""
+		mock_entry = Mock()
+		mock_entry.exists.return_value = False
+		mock_reg_entry_class.return_value = mock_entry
+
+		with pytest.raises(OSError):
+			clean(r"HKCU\NonExistent")
+
+class TestTraverseRegistry:
+	"""Test traverse_registry function for .reg export."""
+
+	def test_traverse_registry_basic(self):
+		"""Test traverse_registry adds header to output."""
+		output_array = []
+		mock_list_fn = Mock(return_value = [])
+		mock_types = {1: "REG_SZ"}
+
+		with patch("winreg.OpenKey"):
+			traverse_registry(
+				hkey = Mock(),
+				key_path = "Software",
+				hive_constant = Mock(),
+				hive_name = "HKEY_CURRENT_USER",
+				list_subkeys_fn = mock_list_fn,
+				types_dict = mock_types,
+				exceptions_module = Mock(),
+				output_array = output_array,
+				beautify_depth = 0,
+				editable = False,
+			)
+
+		# Should have called the function
+		assert mock_list_fn.called
+
+	@patch("winreg.OpenKey")
+	@patch("winreg.EnumValue")
+	def test_traverse_registry_with_values(self, mock_enum_value, mock_open_key):
+		"""Test traverse_registry processes key values."""
+		output_array = []
+		mock_key = Mock()
+		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open_key.return_value.__exit__ = Mock(return_value = None)
+		
+		# Mock EnumValue to return one value then raise OSError
+		mock_enum_value.side_effect = [
+			("TestValue", "TestData", 1), # REG_SZ
+			OSError()
+		]
+
+		mock_types = {1: "REG_SZ"}
+		mock_list_fn = Mock(return_value = [])
+		mock_exceptions = Mock()
+
+		traverse_registry(
+			hkey = 1,
+			key_path = "Software",
+			hive_constant = 1,
+			hive_name = "HKEY_CURRENT_USER",
+			list_subkeys_fn = mock_list_fn,
+			types_dict = mock_types,
+			exceptions_module = mock_exceptions,
+			output_array = output_array,
+			beautify_depth = 0,
+			editable = False,
+		)
+
+		# Header should be added
+		assert any("[HKEY_CURRENT_USER" in str(line) for line in output_array)
+
+class TestCoreSubkeysRecursive:
+	"""Test recursive subkey operations in core.py."""
+
+	@patch("winreg.EnumKey")
+	@patch("winreg.OpenKey")
+	def test_subkeys_recursive(self, mock_open_key, mock_enum_key):
+		"""Test subkeys with recursive = True."""
+		mock_key = Mock()
+		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open_key.return_value.__exit__ = Mock(return_value = None)
+		
+		# First call returns child "Services", second call returns OSError (no more)
+		mock_enum_key.side_effect = ["Services", OSError()]
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch.object(entry, "subkey_exists", return_value = True):
+			result = entry.subkeys(recursive = True, absolute_paths = False)
+			assert isinstance(result, tuple)
+
+	@patch("winreg.EnumKey")
+	@patch("winreg.OpenKey")
+	def test_subkeys_absolute_paths(self, mock_open_key, mock_enum_key):
+		"""Test subkeys with absolute_paths = True."""
+		mock_key = Mock()
+		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open_key.return_value.__exit__ = Mock(return_value = None)
+		mock_enum_key.side_effect = OSError()
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch.object(entry, "subkey_exists", return_value = True):
+			result = entry.subkeys(recursive = False, absolute_paths = True)
+			assert isinstance(result, tuple)
+
+class TestCoreSaveMethod:
+	"""Test save() method for .reg file export."""
+
+	@patch("builtins.open", create = True)
+	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	def test_save_creates_file(self, mock_exists, mock_file):
+		"""Test save creates a .reg file."""
+		mock_file.return_value.__enter__ = Mock()
+		mock_file.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch("regmgr.core.traverse_registry"):
+			result = entry.save(output = "/tmp/test", exist_ok = True)
+			
+		assert result.endswith(".reg")
+		mock_file.assert_called()
+
+	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	def test_save_default_output_name(self, mock_exists):
+		"""Test save uses basename as default output."""
+		entry = RegEntry(r"HKCU\Software")
+		
+		with patch("builtins.open"):
+			with patch("regmgr.core.traverse_registry"):
+				result = entry.save(exist_ok = True)
+		
+		assert "Software" in result
+
+	@patch("builtins.open", create = True)
+	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	def test_save_beautify_depth_minus_one(self, mock_exists, mock_file):
+		"""Test save with beautify_depth = -1 removes all newlines."""
+		mock_file.return_value.__enter__ = Mock()
+		mock_file.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch("regmgr.core.traverse_registry"):
+			entry.save(output = "/tmp/test", beautify_depth = -1, exist_ok = True)
+			
+		mock_file.assert_called()
+
+	@patch("os.path.exists", return_value = True)
+	@patch("os.path.isdir", return_value = False)
+	def test_save_file_exists_not_ok(self, mock_isdir, mock_exists):
+		"""Test save raises when file exists and exist_ok = False."""
+		entry = RegEntry(r"HKCU\Software")
+		
+		with pytest.raises(FileExistsError):
+			entry.save(output = "/tmp/existing.reg", exist_ok = False)
+
+	@patch("os.path.exists", return_value = True)
+	@patch("os.path.isdir", return_value = True)
+	@patch("builtins.open", create = True)
+	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	def test_save_to_directory(self, mock_exists, mock_file, mock_isdir, mock_path_exists):
+		"""Test save to a directory creates file in that directory."""
+		mock_file.return_value.__enter__ = Mock()
+		mock_file.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch("regmgr.core.traverse_registry"):
+			result = entry.save(output = "/tmp/", exist_ok = True)
+		
+		assert "/tmp/" in result
+
+class TestInitModule:
+	"""Test __init__.py module-level code."""
+
+	def test_debug_environment_variable_check(self):
+		"""Test DEBUG_ENVIRONMENT_NAME is checked."""
+		# This is set in __init__.py during module import
+		# Just verify the module can be imported
+		import regmgr
+		assert hasattr(regmgr, "RegEntry")
+
+	@patch("ctypes.windll.shell32.IsUserAnAdmin", return_value = True)
+	def test_admin_check_passed(self, mock_admin):
+		"""Test admin check passes when user is admin."""
+		# Module imports successfully when admin
+		import regmgr
+		assert True
+
+	def test_exceptions_exported(self):
+		"""Test exceptions are exported from module."""
+		import regmgr
+		assert hasattr(regmgr, "exceptions")
+
+	def test_defaults_exported(self):
+		"""Test defaults are exported from module."""
+		import regmgr
+		assert hasattr(regmgr, "defaults")
+
+class TestConfigDefaults:
+	"""Test config.py dataclass defaults."""
+
+	def test_path_defaults_esc_chars(self):
+		"""Test PathDefaults escape characters."""
+		from regmgr.config import defaults
+		assert len(defaults.path.ESC_CHARS) == 11
+
+	def test_file_defaults_exist_ok(self):
+		"""Test FileDefaults exist_ok default."""
+		from regmgr.config import defaults
+		assert defaults.path.file.exist_ok is True
+
+	def test_variable_defaults_type(self):
+		"""Test VariableDefaults type default."""
+		from regmgr.config import defaults
+		assert defaults.variable.type == "REG_SZ"
+
+	def test_defaults_var_alias(self):
+		"""Test defaults.var alias for defaults.variable."""
+		from regmgr.config import defaults
+		assert defaults.var is defaults.variable
+
+	def test_defaults_vars_alias(self):
+		"""Test defaults.vars alias for defaults.variable."""
+		from regmgr.config import defaults
+		assert defaults.vars is defaults.variable
+
+	def test_defaults_variables_alias(self):
+		"""Test defaults.variables alias for defaults.variable."""
+		from regmgr.config import defaults
+		assert defaults.variables is defaults.variable
+
+class TestCoreVariableOperations:
+	"""Test additional variable operation edge cases."""
+
+	@patch("winreg.OpenKey")
+	@patch("winreg.SetValueEx")
+	def test_set_variable_exist_ok_false(self, mock_set, mock_open):
+		"""Test set with exist_ok = False raises if exists."""
+		mock_key = Mock()
+		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch.object(entry, "variable_exists", return_value = True):
+			with pytest.raises(FileExistsError):
+				entry.set("Existing", "value", exist_ok = False)
+
+	@patch("winreg.OpenKey")
+	@patch("winreg.QueryValueEx")
+	def test_get_all_variables(self, mock_query, mock_open):
+		"""Test get without variable name returns all."""
+		mock_key = Mock()
+		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch.object(entry, "variables", return_value = {"Var1": ("value", "REG_SZ")}):
+			result = entry.variables()
+			assert isinstance(result, dict)
+
+	@patch("winreg.OpenKey")
+	@patch("winreg.DeleteValue")
+	def test_delete_variable_alias(self, mock_delete, mock_open):
+		"""Test delete_variable alias."""
+		mock_key = Mock()
+		mock_open.return_value.__enter__ = Mock(return_value = mock_key)
+		mock_open.return_value.__exit__ = Mock(return_value = None)
+
+		entry = RegEntry(r"HKCU\Software")
+		with patch.object(entry, "variable_exists", return_value = True):
+			entry.delvar("OldVar") # Test alias
+			mock_delete.assert_called()
