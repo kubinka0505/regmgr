@@ -825,7 +825,7 @@ class TestTraverseRegistry:
 
 		mock_list_fn.assert_called_once_with(mock_entry)
 
-	"""
+	'''
 	@patch("regmgr.core.winreg.OpenKey")
 	@patch("regmgr.core.winreg.EnumValue")
 	def test_traverse_registry_subkeys(
@@ -876,7 +876,7 @@ class TestTraverseRegistry:
 			assert call["list_subkeys_fn"] is mock_list_fn
 			assert call["output_array"] is output_array
 			assert call["current_depth"] == 1
-	"""
+	'''
 
 	@patch("regmgr.core.winreg.OpenKey")
 	def test_traverse_registry_open_key_oserror(
