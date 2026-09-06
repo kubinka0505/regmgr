@@ -1,7 +1,7 @@
 """Registry manager core."""
 
-from .utils import traverse_registry
 from .config import defaults, exceptions
+from .utils import traverse_registry, canonicalize
 
 import os
 import winreg
@@ -31,7 +31,8 @@ class RegEntry(Mapping):
 		"REG_EXPAND_SZ",
 		"REG_BINARY",
 		"REG_QWORD",
-		"REG_DWORD"
+		"REG_DWORD",
+		"REG_NONE"
 	]
 	_types = {getattr(winreg, type): type for type in _types}
 
@@ -61,6 +62,7 @@ class RegEntry(Mapping):
 			raise exceptions.setup.ESC_FOUND
 
 		path = path.strip(os.sep)
+
 		main = path.split(os.sep)
 		main[0] = main[0].upper()
 
@@ -73,7 +75,16 @@ class RegEntry(Mapping):
 		main[0] = self._hives[main[0]]
 
 		self.__hive = main[0]
-		self.__path = os.sep.join(main)
+
+		# Normalize the actual registry key casing.
+		hive = getattr(winreg, self.__hive)
+
+		parts = main[1:]
+		parts = canonicalize(hive, parts)
+
+		self.__path = os.sep.join(
+			[self.__hive, *parts]
+		)
 
 	#-=-=-=-#
 	# Properties, all tested
@@ -140,7 +151,7 @@ class RegEntry(Mapping):
 			str:
 				Current registry subkey's path, without the hive (e.g. "Software\\MyApp").
 		"""
-		return self.hive.join(self.path.split(self.hive)[1:]).strip(os.sep)
+		return self.path[len(self.hive):].lstrip(os.sep)
 
 	@property
 	def dirname(self) -> str:
@@ -749,8 +760,10 @@ class RegEntry(Mapping):
 	def save(
 		self,
 		output: str = None,
+
 		beautify_depth: int = 0,
 		editable: bool = False,
+
 		exist_ok: bool = True
 	) -> str:
 		"""
@@ -759,8 +772,20 @@ class RegEntry(Mapping):
 		Parameters
 		----------
 		output (str):
-			Output file path. Extension is applied automatically!
-			Equals subkey name if empty.
+			Output file path or directory.
+
+			If omitted, the file is written to the current working
+			directory using `self.basename` as the filename.
+
+			If `output` refers to an existing directory, `self.basename`
+			is appended to it.
+
+			Otherwise, `output` is treated as the file path.
+
+			The `.reg` extension is applied automatically.
+
+			The path is expanded with `os.path.expanduser()`
+			and resolved to an absolute path.
 
 		beautify_depth (int):
 			Depth of subkeys written that will be separated by
@@ -783,31 +808,29 @@ class RegEntry(Mapping):
 		str:
 			Output file path.
 		"""
-
-		if output:
-			output = os.path.expanduser(output)
-			output = os.path.abspath(output)
-		else:
-			output = self.basename
-
 		if exist_ok is None:
 			exist_ok = defaults.path.file.EXIST_OK
 
 		extension = ".reg"
 
-		output = str(Path(output).resolve())
+		if output:
+			output = Path(os.path.expanduser(output)).resolve()
 
-		if os.path.exists(output):
-			if not exist_ok:
-				raise exceptions.path.file.EXISTS
+			# An existing directory means "put <name>.reg inside it".
+			if output.is_dir():
+				output /= self.basename
+		else:
+			# No output means "./<name>.reg".
+			output = Path.cwd() / self.basename
 
-			if os.path.isdir(output):
-				output = os.path.join(
-					output,
-					self.basename
-				)
+		# Apply .reg automatically.
+		output = output.with_suffix(extension)
 
-		output = os.path.splitext(output)[0] + extension
+		# Check whether the final file already exists.
+		if output.exists() and not exist_ok:
+			raise exceptions.path.file.EXISTS
+
+		output = str(output)
 
 		# Initialize collector array
 		array = [
@@ -951,9 +974,11 @@ class RegEntry(Mapping):
 	renvar = rename_variable
 	remvar = delvar = delete_variable = remove_variable
 
+	export = save
+
 	listdir = __dir__
 	getcwd = __str__
 
 #-=-=-=-#
 
-entry = RegEntry
+entry = Entry = RegEntry

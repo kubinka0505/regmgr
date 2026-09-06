@@ -37,7 +37,7 @@ python -m pip install regmgr -U
 - ✔️ Exporting to `.reg` files
 - ✔️ Subkeys creation
 - ✔️ **Recursive** subkeys removal<sup>*</sup>
-- ❌ Valid subkey name casing
+- ✔️ Valid subkey name casing
 - ❌ Safety 🥶
 
 <sup>*</sup> - unstable
@@ -57,22 +57,7 @@ python -m pip install regmgr -U
 > https://github.com/kubinka0505/regmgr/blob/90406c159e186c5299744d322f501165a61cc46e/src/regmgr/__init__.py#L22
 
 > [!IMPORTANT]
-> Due to `winreg` module architecture, **no** way to fix casing in the registry entries paths has been implemented. ~~...yet~~
-> ```python
-> >>> import regmgr
-> >>> reg = regmgr.RegEntry("hkcu\software")
-> >>> 
-> >>> # Casing is not fixed
-> >>> reg.path
-> 'HKEY_CURRENT_USER\\software'
-> >>> 
-> >>> # But key exists
-> >>> reg.exists()
-> True
-> ```
-
-> [!IMPORTANT]
-> Due to the architecture of the registry editor, the relative paths in it's subkey names do not behave as directories.
+> Due to the architecture of the registry editor, the relative paths in it's subkey names do not behave as standard directories.
 > For example in the `os` module, particulary [os.pardir](https://docs.python.org/3/library/os.html#os.pardir) and [os.curdir](https://docs.python.org/3/library/os.html#os.curdir))
 > 
 > In order to get a value from a subkey located in a parent one, either a new `RegEntry` object must be created or the `.relcd()` function has to be used.
@@ -82,10 +67,10 @@ python -m pip install regmgr -U
 > >>> reg = regmgr.RegEntry(r"HKEY_CURRENT_USER\Facts")
 > >>> 
 > >>> # Create it
-> >>> reg.create_subkey()
+> >>> reg.mkdir(exist_ok = True)
 > >>> 
 > >>> # Create another one
-> >>> reg.create_subkey("I got unusual/unexpected behavior.\..Indeed.")
+> >>> reg.mkdir("I got unusual/unexpected behavior.\..Indeed.")
 > >>> reg.subkeys(recursive = True)
 > ('I got unusual/unexpected behavior.', 'I got unusual/unexpected behavior.\\..Indeed.')
 > ```
@@ -106,12 +91,12 @@ python -m pip install regmgr -U
 > 'HKEY_CURRENT_CONFIG\\Software\\Do this\\that'
 > >>> # ...instead of "HKCC\Software\Do this/that\"
 > >>> 
-> >>> # back to "HKCC\Software"
+> >>> # back to "HKCC\Software" then
 > >>> reg.relcd("../..")
 > >>> 
 > >>> # Use like this
 > >>> new_key = r"My key with slashes/../or dots")
-> >>> reg.create_subkey(new_key)
+> >>> reg.mkdir(new_key)
 > >>> reg = regmgr.RegEntry("\\".join((reg.path, new_key)))
 > >>> reg.path
 > 'HKEY_CURRENT_CONFIG\\Software\\My key with slashes/../or dots'
@@ -143,7 +128,7 @@ My system is: Windows 10 Home
 >>> reg.make()
 >>> 
 >>> # Set new values
->>> reg["1st variable"] = "I am REG_SZ by default"
+>>> reg["1st variable"] = "This is a REG_SZ handler"
 >>> 
 >>> reg.set("1st variable", "I can be updated", "sz", exist_ok = True)
 >>> reg.set("2nd variable", regmgr.converter.str_to_bytes("some string"), "binary")
@@ -179,13 +164,15 @@ My system is: Windows 10 Home
 ```python
 >>> import regmgr
 >>> 
+>>> key = r"HKEY_CLASSES_ROOT\.py"
+>>> 
 >>> # Default
->>> regmgr.RegEntry(r"HKEY_CLASSES_ROOT\.py").exists()
+>>> regmgr.RegEntry(key).exists()
 True
 >>> 
 >>> # Alternative, os-like
->>> regmgr.path.exists(r"HKCR\.waaah")
-False
+>>> regmgr.path.exists(key)
+True
 ```
 </details>
 
@@ -208,7 +195,7 @@ HKEY_USERS\.DEFAULT\Control Panel\International\User Profile System Backup
 >>>
 >>> # Advanced, recursive
 >>> reg.subkeys(recursive = True, absolute_paths = False)
-('Geo', 'User Profile', 'User Profile\\pl', 'User Profile System Backup', 'User Profile System Backup\\pl')
+('Geo', 'User Profile', 'User Profile\\en-US', 'User Profile System Backup', 'User Profile System Backup\\en-US')
 ```
 </details>
 
@@ -217,7 +204,7 @@ HKEY_USERS\.DEFAULT\Control Panel\International\User Profile System Backup
 
 ```python
 >>> import regmgr
->>> reg=regmgr.RegEntry(r"HKCU\Software\Microsoft\Accessibility")
+>>> reg = regmgr.RegEntry(r"HKCU\Software\Microsoft\Accessibility")
 >>> 
 >>> # Current
 >>> reg.as_dict(recursive = False)
@@ -226,6 +213,28 @@ HKEY_USERS\.DEFAULT\Control Panel\International\User Profile System Backup
 >>> # Recursive
 >>> reg.as_dict(recursive = True)
 {'CursorColor': [65471, 'REG_DWORD'], 'CursorType': [3, 'REG_DWORD'], 'CursorSize': [3, 'REG_DWORD'], 'CursorIndicator': {'IndicatorColor': [16711871, 'REG_DWORD'], 'IndicatorType': [3, 'REG_DWORD']}}
+```
+</details>
+
+<details>
+	<summary><b>Save to `.reg` file</b> 💾</summary>
+
+```python
+>>> import regmgr
+>>> reg = regmgr.RegEntry(r"HKEY_CURRENT_USER\Control Panel\Quick Actions\Control Center")
+>>> 
+>>> # Simple
+>>> # Inherits the current key name to current location
+>>> # Does not write subkeys without subkeys or/and variables
+>>> reg.export()
+'C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\PythonXXX\\Control Center.reg'
+>>> 
+>>> # Advanced
+>>> # Custom location with specified filename, though accepts directories only as well
+>>> # Editable argument allows writing keys without any subkeys or/and variables
+>>> reg.export("~/custom.reg", editable = True)
+'C:\\Users\\Admin\\custom.reg'
+>>> 
 ```
 </details>
 

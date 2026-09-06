@@ -20,6 +20,146 @@ class StringConverter:
 	s2b = str_to_bytes
 	h2s = hex_to_string = hex_to_str
 
+class RegFileValueFormatter:
+	@staticmethod
+	def hex(data: bytes) -> str:
+		"""
+		Formats bytes for `.reg` hexadecimal syntax.
+
+		Example
+		-------
+			b"\\x12\\x54\\x03" -> "12,54,03"
+		"""
+		return ",".join(
+			f"{byte:02x}"
+			for byte in data
+		)
+
+	@staticmethod
+	def utf16(
+		value,
+		multi_sz: bool = False
+	) -> str:
+		"""
+		Formats a string as UTF-16LE for `.reg` hex syntax.
+
+		REG_MULTI_SZ requirements
+		-------------------------
+			- UTF-16LE strings
+			- NUL between strings
+			- an additional NUL terminator
+		"""
+
+		if multi_sz:
+			# winreg returns REG_MULTI_SZ as list[str].
+			#
+			# Example:
+			# ["foo", "bar"]
+			#
+			# becomes:
+			# "foo\\0bar\\0\\0"
+			value = "\0".join(value) + "\0\0"
+
+		data = value.encode("utf-16le")
+
+		return RegFileValueFormatter.hex(data)
+
+	@staticmethod
+	def main(
+		name,
+
+		value,
+		value_type,
+
+		types_dict,
+
+		exceptions_module,
+
+		optimize: bool
+	):
+		"""
+		Converts a winreg value into a `.reg` value string.
+		"""
+		try:
+			if value_type not in types_dict:
+				return None
+
+			type_name = types_dict[value_type]
+
+			# REG_SZ
+			if type_name == "REG_SZ":
+				value = (value
+					.replace("\\", r"\\")
+					.replace('"', r'\"')
+				)
+
+				return '"{}"'.format(value)
+
+			# REG_EXPAND_SZ
+			if type_name == "REG_EXPAND_SZ":
+				return "hex(2):{}".format(
+					RegFileValueFormatter.utf16(value)
+				)
+
+			# REG_MULTI_SZ
+			if type_name == "REG_MULTI_SZ":
+
+				# An empty REG_MULTI_SZ is still a value.
+				if not value:
+					return "hex(7):"
+
+				return "hex(7):{}".format(
+					RegFileValueFormatter.utf16(value, multi_sz = True)
+				)
+
+			# REG_DWORD
+			if type_name == "REG_DWORD":
+				value = int(value)
+
+				return "dword:{:08x}".format(value)
+
+			# REG_QWORD
+			if type_name == "REG_QWORD":
+				data = int(value).to_bytes(
+					8,
+					byteorder = "little",
+					signed = False
+				)
+
+				return "hex(b):{}".format(
+					RegFileValueFormatter.hex(data)
+				)
+
+			# REG_BINARY
+			if type_name == "REG_BINARY":
+				data = bytes(value)
+
+				# IMPORTANT:
+				# b"" means an existing empty REG_BINARY value.
+				if not data:
+					return "hex(0):"
+
+				return "hex:{}".format(
+					RegFileValueFormatter.hex(data)
+				)
+
+			# REG_NONE
+			if type_name == "REG_NONE":
+				if isinstance(value, (bytes, bytearray)):
+					data = bytes(value)
+				else:
+					data = b""
+
+				if not data:
+					return "hex(0):"
+
+				return "hex:{}".format(RegFileValueFormatter.hex(data))
+
+			# Unsupported
+			return None
+		except (OSError, KeyError, TypeError, ValueError, OverflowError):
+			raise exceptions_module.variable.INCORRECT
+
 #-=-=-=-#
 
 def clean(key_path: str) -> None:
@@ -41,6 +181,69 @@ def clean(key_path: str) -> None:
 	for variable in subkey.variables():
 		subkey.delete_variable(variable)
 
+# cant be in path.py sadly
+def canonicalize(hive: str, parts: str) -> list:
+	"""
+	Resolve registry key names to the casing actually stored
+	in the Windows Registry.
+
+	Notes
+	-----
+		Existing components are canonicalized.
+
+		Once a component does not exist, that component
+		and all following components are left unchanged.
+	"""
+	if not parts:
+		return []
+
+	result = []
+	current = hive
+	opened = False
+
+	try:
+		for index, part in enumerate(parts):
+			actual_name = None
+
+			try:
+				subkey_count = winreg.QueryInfoKey(current)[0]
+
+				for i in range(subkey_count):
+					name = winreg.EnumKey(current, i)
+
+					if name.casefold() == part.casefold():
+						actual_name = name
+						break
+			except OSError:
+				actual_name = None
+
+			if actual_name is None:
+				# This component doesn't exist.
+				# Keep it and everything after it exactly as supplied.
+				result.extend(parts[index:])
+				break
+
+			result.append(actual_name)
+
+			next_key = winreg.OpenKey(
+				current,
+				actual_name
+			)
+
+			if opened:
+				winreg.CloseKey(current)
+
+			current = next_key
+			opened = True
+	finally:
+		if opened:
+			winreg.CloseKey(current)
+
+	return result
+
+#-=-=-=-#
+# Save
+
 def traverse_registry(
 	hkey,
 	key_path,
@@ -55,99 +258,87 @@ def traverse_registry(
 	current_depth: int = 0,
 ):
 	"""
-	Recursively walks registry keys and appends `.reg` lines.
+	Recursively walks registry keys and appends .reg lines.
+
+	The current key is processed first, including all of its values.
+	Then all child keys are recursively processed.
 	"""
-	with winreg.OpenKey(hkey, key_path, access = winreg.KEY_READ) as entry:
-		# Enumerate subkeys
+	try:
+		with winreg.OpenKey(hkey, key_path, access = winreg.KEY_READ) as entry:
+			# Enumerate ALL values belonging to THIS key
+			values = []
+			counter = 0
 
-		try:
-			subkeys = list(
-				list_subkeys_fn(entry)
-			)
-		except (OSError, StopIteration):
-			subkeys = []
+			while True:
+				try:
+					value_name, value, value_type = winreg.EnumValue(entry, counter)
+					values.append((value_name, value, value_type))
 
-		# Process each subkey
-		for subkey_name in subkeys:
-			subkey_path = os.path.join(
-				key_path,
-				subkey_name
-			)
+					counter += 1
+				except OSError:
+					break
 
+			# Determine whether this key should be exported
+			should_write = editable or values # bool
+
+			if should_write:
+				output_array.append("[{0}]".format(os.path.join(hive_name, key_path)))
+
+				# Write every value, including empty values
+				for value_name, value, value_type in values:
+
+					formatted_value = RegFileValueFormatter.main(
+						name = value_name,
+
+						value = value,
+						value_type = value_type,
+
+						types_dict = types_dict,
+
+						exceptions_module = exceptions_module,
+
+						optimize = editable
+					)
+
+					# Unsupported types are skipped
+					if formatted_value is None or not isinstance(formatted_value, str):
+						continue
+
+					output_array.append(
+						'"{0}"={1}'.format(
+							value_name.replace(
+								"\\",
+								r"\\"
+							).replace(
+								'"',
+								r'\"'
+							),
+							formatted_value
+						)
+					)
+
+				# End of key
+				output_array.append("")
+
+				# Beautification
+				if beautify_depth > 0 and current_depth == beautify_depth:
+					output_array.append("")
+					output_array.append("")
+
+			# Enumerate child keys
 			try:
+				subkeys = list(list_subkeys_fn(entry))
+			except (OSError, StopIteration):
+				subkeys = []
 
-				with winreg.OpenKey(hive_constant, subkey_path, access = winreg.KEY_READ) as sub_entry:
-					# Enumerate ALL values
-					values = []
-					counter = 0
+			# Recurse into every child
+			for subkey_name in subkeys:
+				subkey_path = os.path.join(
+					key_path,
+					subkey_name
+				)
 
-					while True:
-						try:
-							value = winreg.EnumValue(sub_entry, counter)
-							values.append(list(value))
-							counter += 1
-						except OSError:
-							break
-
-					# Determine whether key contains values
-					has_values = bool(values)
-
-					# Determine whether key should be written
-					if editable:
-						# Editable mode:
-						# WRITE EVERY KEY.
-						should_write = True
-					else:
-						# WRITE ONLY KEYS WITH VALUES.
-						should_write = has_values
-
-					# Write key header
-					if should_write:
-						output_array.append("[{0}]".format(os.path.join(hive_name, subkey_path)))
-
-						for keys in values:
-							var_type = ""
-
-							try:
-								# Registry type is not supported
-								if keys[2] not in types_dict:
-									continue
-
-								type_name = types_dict[keys[2]]
-
-								# REG_DWORD
-								if type_name == "REG_DWORD":
-									var_type = "dword:"
-
-									keys[1] = '"{0}"'.format(
-										keys[1]
-									)
-
-								# REG_QWORD
-								elif type_name == "REG_QWORD":
-									var_type = "qword:"
-
-								# REG_MULTI_SZ
-								elif type_name == "REG_MULTI_SZ":
-									var_type = "hex(7):"
-
-									encoded_words = [word.encode("UTF-8").hex(sep = ",") for word in keys[1]]
-									keys[1] = ",00,".join(encoded_words)
-							except (OSError, KeyError):
-								raise (exceptions_module.variable.INCORRECT)
-
-							# Append value
-							output_array.append('"{0}"={1}{2}'.format(keys[0], var_type, keys[1]))
-
-						# End of key
-						output_array.append("")
-
-						# Beautification
-						if (beautify_depth > 0 and current_depth == beautify_depth):
-							for x in range(2):
-								output_array.append("")
-
-					# ALWAYS recurse
+				try:
 					traverse_registry(
 						hkey = hive_constant,
 						key_path = subkey_path,
@@ -161,10 +352,13 @@ def traverse_registry(
 						editable = editable,
 						current_depth = current_depth + 1,
 					)
-			except OSError:
-				continue
+
+				except OSError:
+					continue
+	except OSError:
+		return
 
 #-=-=-=-#
 
-conv = StringConverter
 clear = clean
+resolve = normpath = canonicalize

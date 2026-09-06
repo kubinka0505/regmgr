@@ -20,7 +20,8 @@ def listdir(path: str) -> list:
 	"""
 	return dir(RegEntry(path))
 
-class path(RegEntry):
+class path:
+	@staticmethod
 	def abspath(path: str, short: bool = False) -> str:
 		"""
 		Retrieves registry full key.
@@ -45,6 +46,7 @@ class path(RegEntry):
 	
 		return retval.path
 
+	@staticmethod
 	def basename(path) -> str:
 		"""
 		Returns registry key's name.
@@ -56,6 +58,7 @@ class path(RegEntry):
 		"""
 		return RegEntry(path).basename
 
+	@staticmethod
 	def dirname(path: str, short: Optional[bool] = False) -> str:
 		"""
 		Retrieves name of current subkey's parent path.
@@ -79,6 +82,7 @@ class path(RegEntry):
 
 		return retval
 
+	@staticmethod
 	def exists(path: str) -> bool:
 		"""
 		Checks for registry subkey existence.
@@ -95,6 +99,7 @@ class path(RegEntry):
 		"""
 		return RegEntry(path).subkey_exists()
 
+	@staticmethod
 	def is_hive(path: str) -> bool:
 		"""
 		Determines whether path is a hive.
