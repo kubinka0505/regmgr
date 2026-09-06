@@ -769,7 +769,7 @@ class TestTraverseRegistry:
 
 	@patch("regmgr.core.winreg.OpenKey")
 	@patch("regmgr.core.winreg.EnumValue")
-	@patch("regmgr.core.RegFileValueFormatter.main")
+	@patch("regmgr.utils.RegFileValueFormatter.main")
 	def test_traverse_registry_with_value(
 		self,
 		mock_formatter,
@@ -963,7 +963,7 @@ class TestTraverseRegistry:
 
 		mock_list_fn = Mock(return_value = [])
 
-		with patch("regmgr.core.RegFileValueFormatter.main", return_value = None):
+		with patch("regmgr.utils.RegFileValueFormatter.main", return_value = None):
 			traverse_registry(
 				hkey = Mock(),
 				key_path = "Software",
@@ -1067,14 +1067,15 @@ class TestCoreSaveMethod:
 
 		mock_file.assert_called()
 
-	@patch("os.path.exists", return_value = True)
-	@patch("os.path.isdir", return_value = False)
-	def test_save_file_exists_not_ok(self, mock_isdir, mock_exists):
-		"""Test save raises when file exists and exist_ok = False."""
+	@patch.object(Path, "exists", return_value = True)
+	def test_save_file_exists_not_ok(self, mock_exists):
+		"""Test save raises when file exists and exist_ok=False."""
 		entry = RegEntry(r"HKU\Software")
-		
+
 		with pytest.raises(FileExistsError):
 			entry.save(output = "/tmp/existing.reg", exist_ok = False)
+
+		mock_exists.assert_called_once()
 
 	@patch.object(Path, "exists", return_value = True)
 	@patch.object(Path, "is_dir", return_value = True)
