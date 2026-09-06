@@ -190,7 +190,7 @@ class TestRegEntryChecks:
 
 		# Verify OpenKey was called with correct path
 		call_args = mock_open_key.call_args
-		assert r"Software\Microsoft" in call_args[0]
+		assert r"SOFTWARE\Microsoft" in call_args[0]
 
 	@patch("winreg.OpenKey")
 	@patch("winreg.QueryValueEx")
@@ -807,7 +807,7 @@ class TestCoreSaveMethod:
 			with patch("regmgr.core.traverse_registry"):
 				result = entry.save(exist_ok = True)
 
-		assert "Software" in result
+		assert "SOFTWARE" in result
 
 	@patch("builtins.open", create = True)
 	@patch.object(RegEntry, "subkey_exists", return_value = True)
@@ -847,7 +847,7 @@ class TestCoreSaveMethod:
 		# Path gets resolved to absolute path on all platforms
 		# Just verify it"s a .reg file with the right basename
 		assert result.endswith(".reg")
-		assert "Software" in result
+		assert "SOFTWARE" in result
 
 class TestInitModule:
 	"""Test __init__.py module-level code."""
