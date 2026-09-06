@@ -733,6 +733,7 @@ class TestTraverseRegistry:
 				beautify_depth = 0,
 				editable = False,
 			)
+
 			assert True # Function completed without error
 		except Exception:
 			pytest.fail("traverse_registry should not raise exception")
