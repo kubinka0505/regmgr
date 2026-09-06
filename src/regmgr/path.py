@@ -74,8 +74,10 @@ class path(RegEntry):
 
 		if short:
 			retval = retval.dirname_short
+		else:
+			retval = retval.dirname
 
-		return retval.dirname
+		return retval
 
 	def exists(path: str) -> bool:
 		"""
