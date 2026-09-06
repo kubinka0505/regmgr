@@ -54,7 +54,7 @@ python -m pip install regmgr -U
 > 
 > Letter case is not important. 🙂
 >
-> https://github.com/kubinka0505/regmgr/blob/85c3d28eea2c3e352f5c10cd59f841d7342adc97/Files/src/__init__.py#L22
+> https://github.com/kubinka0505/regmgr/blob/90406c159e186c5299744d322f501165a61cc46e/src/regmgr/__init__.py#L22
 
 > [!IMPORTANT]
 > Due to `winreg` module architecture, **no** way to fix casing in the registry entries paths has been implemented. ~~...yet~~
