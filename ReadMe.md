@@ -114,7 +114,7 @@ python -m pip install regmgr -U
 > >>> reg.create_subkey(new_key)
 > >>> reg = regmgr.RegEntry("\\".join((reg.path, new_key)))
 > >>> reg.path
-'HKEY_CURRENT_CONFIG\\Software\\My key with slashes/../or dots'
+> 'HKEY_CURRENT_CONFIG\\Software\\My key with slashes/../or dots'
 > ```
 
 <details>
@@ -217,10 +217,15 @@ HKEY_USERS\.DEFAULT\Control Panel\International\User Profile System Backup
 
 ```python
 >>> import regmgr
->>> reg = regmgr.RegEntry(r"HKEY_CLASSES_ROOT\.exe")
+>>> reg=regmgr.RegEntry(r"HKCU\Software\Microsoft\Accessibility")
 >>> 
->>> print(reg.variables())
-{'': ('exefile', 'REG_SZ'), 'Content Type': ('application/x-msdownload', 'REG_SZ')}
+>>> # Current
+>>> reg.as_dict(recursive = False)
+{'CursorColor': [65471, 'REG_DWORD'], 'CursorType': [3, 'REG_DWORD'], 'CursorSize': [3, 'REG_DWORD']}
+>>> 
+>>> # Recursive
+>>> reg.as_dict(recursive = True)
+{'CursorColor': [65471, 'REG_DWORD'], 'CursorType': [3, 'REG_DWORD'], 'CursorSize': [3, 'REG_DWORD'], 'CursorIndicator': {'IndicatorColor': [16711871, 'REG_DWORD'], 'IndicatorType': [3, 'REG_DWORD']}}
 ```
 </details>
 

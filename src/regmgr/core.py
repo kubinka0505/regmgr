@@ -875,12 +875,15 @@ class RegEntry(Mapping):
 		return self.subkeys(False, False)
 
 	# Mapping methods returning native dict views
-	def as_dict(self, recursive: bool = False) -> dict:
+	def as_dict(self, recursive: bool = True) -> dict:
 		"""Helper to build full subkey map."""
-		return {
+		retval = self.variables()
+		retval.update({
 			subkey: self.variables(subkey)
 			for subkey in self.subkeys(recursive = recursive)
-		}
+		})
+
+		return retval
 
 	def __iter__(self):
 		"""Yields (subkey, variables) pairs so dict(self) works."""
