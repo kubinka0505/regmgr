@@ -616,7 +616,7 @@ class TestPathModule:
 		result = regmgr.path.exists(r"HKCU\Software")
 		assert result is True
 
-	@patch.object(RegEntry, "subkey_exists", return_value = False)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = False)
 	def test_path_exists_false(self, mock_exists):
 		"""Test path.exists returns False when key doesn"t exist."""
 		result = regmgr.path.exists(r"HKCU\NonExistent")
@@ -1044,7 +1044,7 @@ class TestCoreSaveMethod:
 	"""Test save() method for .reg file export."""
 
 	@patch("builtins.open", create = True)
-	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = True)
 	def test_save_creates_file(self, mock_exists, mock_file):
 		"""Test save creates a .reg file."""
 		mock_file.return_value.__enter__ = Mock()
@@ -1057,7 +1057,7 @@ class TestCoreSaveMethod:
 		assert result.endswith(".reg")
 		mock_file.assert_called()
 
-	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = True)
 	def test_save_default_output_name(self, mock_exists):
 		"""Test save uses basename as default output."""
 		entry = regmgr.RegEntry(r"HKCU\Software")
@@ -1069,7 +1069,7 @@ class TestCoreSaveMethod:
 		assert "SOFTWARE" in result
 
 	@patch("builtins.open", create = True)
-	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = True)
 	def test_save_beautify_depth_minus_one(self, mock_exists, mock_file):
 		"""Test save with beautify_depth = -1 removes all newlines."""
 		mock_file.return_value.__enter__ = Mock()
@@ -1094,7 +1094,7 @@ class TestCoreSaveMethod:
 	@patch.object(Path, "exists", return_value = True)
 	@patch.object(Path, "is_dir", return_value = True)
 	@patch("builtins.open", create = True)
-	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = True)
 	def test_save_to_directory_editable(self, mock_exists, mock_file, mock_isdir, mock_path_exists):
 		"""Test save to a directory creates file in that directory."""
 		mock_file.return_value.__enter__ = Mock()
