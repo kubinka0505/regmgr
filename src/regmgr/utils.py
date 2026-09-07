@@ -30,10 +30,7 @@ class RegFileValueFormatter:
 		-------
 			b"\\x12\\x54\\x03" -> "12,54,03"
 		"""
-		return ",".join(
-			f"{byte:02x}"
-			for byte in data
-		)
+		return ",".join(f"{byte:02x}" for byte in data)
 
 	@staticmethod
 	def hex_wrap(value: str, line_length: int = 78) -> str:
@@ -66,7 +63,7 @@ class RegFileValueFormatter:
 			
 			if len(test_line) > line_length and current_line != prefix:
 				lines.append(current_line + ",\\")
-				current_line = "  " + byte  # Indent continuation
+				current_line = "  " + byte # Indent continuation
 			else:
 				current_line = test_line
 		
