@@ -833,10 +833,7 @@ class RegEntry(Mapping):
 		output = str(output)
 
 		# Initialize collector array
-		array = [
-			"Windows Registry Editor Version 5.00",
-			""
-		]
+		array = ["Windows Registry Editor Version 5.00", ""]
 
 		# Traverse registry
 		traverse_registry(
@@ -861,20 +858,19 @@ class RegEntry(Mapping):
 		# Handle beautify_depth
 		if beautify_depth == -1:
 			while "\n" * 2 in content:
-				content = content.replace(
-					"\n" * 2,
-					"\n"
-				)
+				content = content.replace("\n" * 2, "\n")
 		else:
 			while "\n" * 3 in content:
-				content = content.replace(
-					"\n" * 3,
-					"\n" * 2
-				)
+				content = content.replace("\n" * 3, "\n" * 2)
 
 		# Write file
-		with open(output, "w", encoding = "UTF-8") as file:
-			file.write(content)
+		try:
+			with open(output, "w", encoding = "UTF-16-LE") as file:
+				file.write(content)
+		except UnicodeEncodeError:
+			# Fallback for edge cases with truly broken surrogates
+			with open(output, "w", encoding = "UTF-8", errors = "surrogatepass") as file:
+				file.write(content)
 
 		return output
 

@@ -36,6 +36,46 @@ class RegFileValueFormatter:
 		)
 
 	@staticmethod
+	def hex_wrap(value: str, line_length: int = 78) -> str:
+		"""
+		Wraps long hex values with backslash continuations (regedit format).
+		
+		Example:
+			"hex(2):01,02,03,04,05,06,..." becomes:
+			"hex(2):01,02,03,04,05,06,\\\n  00,..."
+		"""
+		# Only wrap hex/qword values
+		if not value.startswith(("hex", "qword")):
+			return value
+		
+		if len(value) <= line_length:
+			return value
+		
+		# Split into prefix ("hex(2):") and hex data ("31,00,20,...")
+		parts = value.split(":", 1)
+		prefix = parts[0] + ":"
+		hex_data = parts[1]
+		
+		hex_bytes = hex_data.split(",")
+		
+		lines = []
+		current_line = prefix
+		
+		for byte in hex_bytes:
+			test_line = current_line + ("," if current_line != prefix else "") + byte
+			
+			if len(test_line) > line_length and current_line != prefix:
+				lines.append(current_line + ",\\")
+				current_line = "  " + byte  # Indent continuation
+			else:
+				current_line = test_line
+		
+		if current_line:
+			lines.append(current_line)
+		
+		return "\n".join(lines)
+
+	@staticmethod
 	def utf16(
 		value,
 		multi_sz: bool = False
@@ -81,6 +121,9 @@ class RegFileValueFormatter:
 		Converts a winreg value into a `.reg` value string.
 		"""
 		try:
+			if value is None:
+				return "hex(0):"
+
 			if value_type not in types_dict:
 				return None
 
@@ -120,11 +163,7 @@ class RegFileValueFormatter:
 
 			# REG_QWORD
 			if type_name == "REG_QWORD":
-				data = int(value).to_bytes(
-					8,
-					byteorder = "little",
-					signed = False
-				)
+				data = int(value).to_bytes(8, byteorder = "little", signed = False)
 
 				return "hex(b):{}".format(
 					RegFileValueFormatter.hex(data)
@@ -291,7 +330,6 @@ def traverse_registry(
 
 				# Write every value, including empty values
 				for value_name, value, value_type in values:
-
 					formatted_value = RegFileValueFormatter.main(
 						name = value_name,
 
@@ -309,18 +347,13 @@ def traverse_registry(
 					if formatted_value is None or not isinstance(formatted_value, str):
 						continue
 
-					output_array.append(
-						'"{0}"={1}'.format(
-							value_name.replace(
-								"\\",
-								r"\\"
-							).replace(
-								'"',
-								r'\"'
-							),
-							formatted_value
-						)
-					)
+					#if editable:
+					formatted_value = RegFileValueFormatter.hex_wrap(formatted_value)
+
+					final_value = value_name.replace("\\", r"\\")
+					final_value = final_value.replace('"', r'\"')
+
+					output_array.append(f'"{final_value}"={formatted_value}')
 
 				# End of key
 				output_array.append("")
