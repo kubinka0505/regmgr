@@ -6,8 +6,6 @@ import importlib
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-import regmgr
-
 mock_utils = MagicMock()
 mock_config = MagicMock()
 
@@ -30,7 +28,8 @@ class TestImport:
 	def test_not_admin_warning(self, monkeypatch):
 		monkeypatch.setenv("PYTHON_REGISTRY_UAC", "")
 
-		importlib.reload(regmgr)
+		os.sys.modules.pop("regmgr", None)
+		import regmgr
 
 		monkeypatch.delenv("PYTHON_REGISTRY_UAC")
 
