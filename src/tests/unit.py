@@ -2,6 +2,7 @@
 import os
 import pytest
 import tempfile
+import importlib
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
@@ -26,14 +27,14 @@ os.sys.modules["core.config"] = mock_config
 class TestImport:
 	"""Module importing test."""
 
-	def test_not_admin_warning(monkeypatch):
+	def test_not_admin_warning(self, monkeypatch):
 		monkeypatch.setenv("PYTHON_REGISTRY_UAC", "")
 
 		importlib.reload(regmgr)
 
 		monkeypatch.delenv("PYTHON_REGISTRY_UAC")
 
-		with pytest.warns( RuntimeWarning, match = "Not as admin - management of most hives will fail", ):
+		with pytest.warns(RuntimeWarning, match = "Not as admin - management of most hives will fail"):
 			importlib.reload(regmgr)
 
 class TestRegEntryInitialization:
@@ -345,7 +346,7 @@ class TestRegEntrySubkeys:
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 
-		with patch.object(RegEntry, "subkey_exists", return_value = True):
+		with patch.object(regmgr.RegEntry, "subkey_exists", return_value = True):
 			entry = regmgr.RegEntry(r"HKCU\Software")
 			entry.delete_subkeys("OldKey")
 
@@ -398,7 +399,7 @@ class TestRegEntryVariables:
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 
-		with patch.object(RegEntry, "variable_exists", return_value = True):
+		with patch.object(regmgr.RegEntry, "variable_exists", return_value = True):
 			entry = regmgr.RegEntry(r"HKCU\Software")
 			entry.remove_variable("TestVar")
 
@@ -413,7 +414,7 @@ class TestRegEntryVariables:
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 
-		with patch.object(RegEntry, "variable_exists", return_value = False):
+		with patch.object(regmgr.RegEntry, "variable_exists", return_value = False):
 			entry = regmgr.RegEntry(r"HKCU\Software")
 			with pytest.raises(FileNotFoundError, match = "Variable does not exist"):
 				entry.remove_variable("NonExistent")
@@ -461,7 +462,7 @@ class TestRegEntryMappingInterface:
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 		mock_query.return_value = ("test_value", 1)
 
-		with patch.object(RegEntry, "variables", return_value = {"TestVar": ("test_value", 1)}):
+		with patch.object(regmgr.RegEntry, "variables", return_value = {"TestVar": ("test_value", 1)}):
 			entry = regmgr.RegEntry(r"HKCU\Software")
 			value = entry["TestVar"]
 			assert value == "test_value"
@@ -491,7 +492,7 @@ class TestRegEntryMappingInterface:
 		mock_open_key.return_value.__enter__ = Mock(return_value = mock_key)
 		mock_open_key.return_value.__exit__ = Mock(return_value = None)
 
-		with patch.object(RegEntry, "variable_exists", return_value = True):
+		with patch.object(regmgr.RegEntry, "variable_exists", return_value = True):
 			entry = regmgr.RegEntry(r"HKCU\Software")
 			del entry["TestVar"]
 
@@ -581,7 +582,7 @@ class TestPathModule:
 
 	def test_listdir(self):
 		"""Test listdir returns subkey names."""
-		with patch.object(RegEntry, "__dir__", return_value = ["Software", "Services"]):
+		with patch.object(regmgr.RegEntry, "__dir__", return_value = ["Software", "Services"]):
 			result = regmgr.listdir("HKCU")
 			assert isinstance(result, (list, tuple))
 
