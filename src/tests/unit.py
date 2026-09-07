@@ -610,7 +610,7 @@ class TestPathModule:
 		result = regmgr.path.dirname(r"HKCU\Software\Microsoft", short = True)
 		assert result == r"HKCU\SOFTWARE"
 
-	@patch.object(RegEntry, "subkey_exists", return_value = True)
+	@patch.object(regmgr.RegEntry, "subkey_exists", return_value = True)
 	def test_path_exists_true(self, mock_exists):
 		"""Test path.exists returns True when key exists."""
 		result = regmgr.path.exists(r"HKCU\Software")
@@ -884,7 +884,7 @@ class TestTraverseRegistry:
 			call = mock_traverse.call_args.kwargs
 
 			assert call["hkey"] is hive_constant
-			assert call["key_path"] == r"Software\Child"
+			assert call["key_path"] == "Software\\Child"
 			assert call["hive_constant"] is hive_constant
 			assert call["hive_name"] == "HKEY_USERS"
 			assert call["list_subkeys_fn"] is mock_list_fn
