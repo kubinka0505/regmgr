@@ -632,7 +632,7 @@ class TestPathModule:
 		result = regmgr.path.is_hive(r"HKCU\Software")
 		assert result is False
 
-class Testregmgr.StringConverter:
+class TestStringConverter:
 	"""Test regmgr.StringConverter utility class."""
 
 	def test_str_to_bytes_default_encoding(self):
